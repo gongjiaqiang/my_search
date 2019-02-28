@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>my_search</title>
+    <style>
+        pre {outline: 0 solid #ccc; padding: 5px; margin: 5px; }
+        .string { color: green; }
+        .number { color: darkorange; }
+        .boolean { color: blue; }
+        .null { color: magenta; }
+        .key { color: red; }
+
+        input {width: 200px; height: 28px}
+        button {height: 32px; margin: 10px}
+        select {height: 32px; width: 150px}
+    </style>
+</head>
+<body>
+
+    <div style="margin-left: 100px">
+        <h2>原始网站</h2>
+        <div style="margin-left: 30px">
+            <tr>
+                {%  for k, v in name_map.items() %}
+                <td><a href="{{ url_map[k] }}" target="_blank">{{ v }}</a></td></br>
+                {% endfor %}
+            </tr>
+        </div>
+
+        <h2>选择查询的网站</h2>
+        <div style="margin-left: 30px">
+        <form action="" id="my_search">
+        <select id="web_site" onchange="gradeChange(this.value)">
+            <option value=""></option>
+            {% for k, v in name_map.items() %}
+            <option value="{{ k }}">{{ v }}</option>
+            {% endfor %}
+        </select></br>
+            <div id='patent' style="display: none">
+                <p>提示：输入的申请号/专利号必须为9位或13位，不需输入字母“ZL”，并且不能包含“.”</p>
+            专利号：<input type="text" placeholder="" id="patent_id" onfocus="myFocus(this)"></br>
+            <div>
+                <img src="static/images/patent_code.jpg" alt="captcha">
+            </div>
+            验证码：<input type="text" id="patent_code" onfocus="myFocus(this)"></br>
+            </div>
+            <div id="trademark" style="display: none">
+                <p>商标</p>
+            </div>
+            <div id="credit" style="display: none">
+                <p>国家企业信用信息</p>
+            </div>
+            <div id="business" style="display: none">
+                <p>企查查</p>
+            </div>
+            <button type="submit" id="submit_form"><span><strong>查询</strong></span></button>
+        </form>
+        <div id="loading" style="display:none"><img src="static/images/loading.gif" alt="loading"></div>
+            <pre id="data"></pre>
+        </div>
+    </div>
+            <div id="excel" style="display:none"><a href="#" id="a_label">下载Excel文件</a></div>
+    <script type="text/javascript" src="static/js/jquery.min.js"></script>
+    <script src="static/js/jquery.form.min.js"></script>
+    <script type="text/javascript">
+        function gradeChange(value) {
+            var img = document.getElementById('loading');
+            var excel = document.getElementById('excel');
+            var patent = document.getElementById('patent');
+            var trademark = document.getElementById('trademark');
+            var credit = document.getElementById('credit');
+            var business = document.getElementById('business');
+            if(value === '0'){
+                patent.style.display = '';
+                trademark.style.display = 'none';
+                credit.style.display = 'none';
+                business.style.display = 'none';
+                excel.style.display = 'none';
+                img.style.display = 'none';
+                $('#data').html('');
+            }else if(value === '1'){
+                trademark.style.display = '';
+                patent.style.display = 'none';
+                credit.style.display = 'none';
+                business.style.display = 'none';
+                excel.style.display = 'none';
+                img.style.display = 'none';
+                $('#data').html('');
+            }else if(value === '2'){
+                credit.style.display = '';
+                patent.style.display = 'none';
+                trademark.style.display = 'none';
+                business.style.display = 'none';
+                excel.style.display = 'none';
+                img.style.display = 'none';
+                $('#data').html('');
+            }else if(value === '3'){
+                business.style.display = '';
+                patent.style.display = 'none';
+                trademark.style.display = 'none';
+                credit.style.display = 'none';
+                excel.style.display = 'none';
+                img.style.display = 'none';
+                $('#data').html('');
+            }else {
+                patent.style.display = 'none';
+                trademark.style.display = 'none';
+                credit.style.display = 'none';
+                business.style.display = 'none';
+                excel.style.display = 'none';
+                img.style.display = 'none';
+                $('#data').html('');
+            }
+        }
+
+        $(document).ready(function () {
+            $('#submit_form').click(function (e) {
+                e.preventDefault();
+                var web_site = $('#web_site').val();
+                var req;
+                $('#data').html('');
+                var img = document.getElementById('loading');
+                var excel = document.getElementById('excel');
+                if(web_site == '0'){
+                    var patent_id = $('#patent_id').val();
+                    var patent_code = $('#patent_code').val();
+                    req = {
+                        'web_site': web_site,
+                        'patent_id': patent_id,
+                        'patent_code': patent_code
+                    }
+                }else if(web_site == '1'){
+                    req = {'web_site': web_site}
+                }else if(web_site == '2'){
+                    req = {'web_site': web_site}
+                }else if(web_site == '3'){
+                    req = {'web_site': web_site}
+                }else{
+                    alert('请选择站点');
+                    return
+                }
+                excel.style.display = 'none';
+                img.style.display = '';
+                $.ajax({
+                url: 'query',
+                type: 'post',
+                data: JSON.stringify(req),
+                contentType: "application/json",
+                dataType: "json",
+                success: function (result) {
+                    if(600 == result.code){
+                        excel.style.display = '';
+                        $('#a_label').attr('href','/exp_excel/' + result.e_id)
+                    }
+                    img.style.display = 'none';
+                    // $('#data').html(JSON.stringify(result))
+                    $('#data').html(syntaxHighlight(result))
+                }
+            })
+            })
+        })
+    </script>
+        <script type="text/javascript">
+        function syntaxHighlight(json) {
+            if (typeof json != 'string') {
+                json = JSON.stringify(json, undefined, 2);
+            }
+            json = json.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
+                var cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+        function myFocus(obj) {
+            if (obj.placeholder=='Track Number'){
+                obj.value = ''
+            }
+        }
+    </script>
+</body>
+</html>
